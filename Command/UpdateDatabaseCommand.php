@@ -2,6 +2,7 @@
 
 namespace Cravler\MaxMindGeoIpBundle\Command;
 
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
@@ -10,15 +11,13 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * @author Sergei Vizel <sergei.vizel@gmail.com>
  */
+#[AsCommand(name: 'cravler:maxmind:geoip-update', description: 'Downloads and updates the MaxMind GeoIp2 database')]
 class UpdateDatabaseCommand extends Command
 {
-    protected static $defaultName = 'cravler:maxmind:geoip-update';
-    protected static $defaultDescription = 'Downloads and updates the MaxMind GeoIp2 database';
-
     /**
      * @var array
      */
-    private array $config = [];
+    private array $config;
 
     /**
      * @param array $config
@@ -65,7 +64,7 @@ class UpdateDatabaseCommand extends Command
             $success = $this->decompressFile($tmpFile, $tmpFileUnzipped);
 
             if (!$input->getOption('no-md5-check')) {
-                if (strpos($tmpFile, '.tar.gz') !== false) {
+                if (str_contains($tmpFile, '.tar.gz')) {
                     $calculatedMD5 = md5_file($tmpFile);
                 } else {
                     $calculatedMD5 = md5_file($tmpFileUnzipped);
@@ -91,13 +90,15 @@ class UpdateDatabaseCommand extends Command
                         unlink($tmpFileUnzipped);
                         $output->writeln(sprintf('<error>Unable to check MD5 for %s</error>', $source));
                         continue;
-                    } elseif ($expectedMD5 !== $calculatedMD5) {
+                    }
+
+                    if ($expectedMD5 !== $calculatedMD5) {
                         unlink($tmpFileUnzipped);
                         $output->writeln(sprintf('<error>MD5 for %s does not match</error>', $source));
                         continue;
-                    } else {
-                        $output->writeln('<info>File hash OK</info>');
                     }
+
+                    $output->writeln('<info>File hash OK</info>');
                 } else {
                     $output->writeln('<comment>Skipped</comment>');
                 }
@@ -127,10 +128,10 @@ class UpdateDatabaseCommand extends Command
      *
      * @return bool|string
      */
-    private function downloadFile(string $source)
+    private function downloadFile(string $source): bool|string
     {
         $tmpFile = tempnam(sys_get_temp_dir(), 'maxmind_geoip2_');
-        if (strpos($source, 'tar.gz') !== false) {
+        if (str_contains($source, 'tar.gz')) {
             @rename($tmpFile, $tmpFile . '.tar.gz');
             $tmpFile .= '.tar.gz';
         }
@@ -150,7 +151,7 @@ class UpdateDatabaseCommand extends Command
      */
     private function decompressFile(string $fileName, string $outputFilePath): bool
     {
-        if (strpos($fileName, '.tar.gz') !== false) {
+        if (str_contains($fileName, '.tar.gz')) {
             $tmpDir = tempnam(sys_get_temp_dir(), 'MaxMind_');
             unlink($tmpDir);
             mkdir($tmpDir);
@@ -169,7 +170,7 @@ class UpdateDatabaseCommand extends Command
             }
 
             $files = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($tmpDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                new \RecursiveDirectoryIterator($tmpDir, \FilesystemIterator::SKIP_DOTS),
                 \RecursiveIteratorIterator::CHILD_FIRST
             );
             foreach ($files as $fileinfo) {

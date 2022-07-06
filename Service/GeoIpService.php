@@ -15,7 +15,7 @@ class GeoIpService
     /**
      * @var array
      */
-    private array $config = [];
+    private array $config;
 
     /**
      * @param array $config
@@ -48,9 +48,9 @@ class GeoIpService
      *
      * @throws GeoIpException
      */
-    public function getReader(string $type = 'country', $locales = ['en']): Reader
+    public function getReader(string $type = 'country', array $locales = ['en']): Reader
     {
-        $type = preg_replace_callback('/([A-Z])/', fn(array $matches): string => '_' . strtolower($matches[1]), $type);
+        $type = preg_replace_callback('/([A-Z])/', static fn(array $matches): string => '_' . strtolower($matches[1]), $type);
 
         if (!isset($this->config['db'][$type])) {
             throw new GeoIpException(sprintf('Unknown database type %s', $type));
@@ -70,16 +70,16 @@ class GeoIpService
      */
     public function getRecord(string $ipAddress = 'me', string $type = 'country', array $options = []): AbstractModel
     {
-        $provider = isset($options['provider']) ? $options['provider'] : 'reader';
-        $locales = isset($options['locales']) ? $options['locales'] : ['en'];
+        $provider = $options['provider'] ?? 'reader';
+        $locales = $options['locales'] ?? ['en'];
 
-        if ('client' == $provider) {
+        if ('client' === $provider) {
             $provider = $this->getClient($locales);
         } else {
             $provider = $this->getReader($type, $locales);
         }
 
-        $method = preg_replace_callback('/_([a-z])/', fn(array $matches): string => strtoupper($matches[1]), $type);
+        $method = preg_replace_callback('/_([a-z])/', static fn(array $matches): string => strtoupper($matches[1]), $type);
 
         if (!method_exists($provider, $method)) {
             throw new GeoIpException(sprintf('The method "%s" does not exist for %s', $method, get_class($provider)));
